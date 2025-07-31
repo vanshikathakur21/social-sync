@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
-import { Loader2, Download, Sparkles, Twitter } from 'lucide-react'
+import { Loader2, Save, Sparkles, Twitter, Trash2 } from 'lucide-react'
 
 const formSchema = z.object({
   age: z.string().min(1, 'Age is required').refine(
@@ -54,6 +54,39 @@ export default function SocialSyncForm() {
     },
   })
 
+  // Load saved data on component mount
+  useEffect(() => {
+    const savedFormData = loadDataFromLocalStorage()
+    const savedDisplayData = loadSavedDisplayData()
+    
+    if (savedFormData) {
+      // Populate form fields with saved data
+      form.reset(savedFormData)
+      toast.success('Previously saved data loaded!')
+    }
+    
+    if (savedDisplayData) {
+      // Populate saved data preview
+      setSavedData(savedDisplayData)
+    }
+  }, [form])
+
+  // Auto-save functionality - save data whenever form values change
+  useEffect(() => {
+    const subscription = form.watch((data) => {
+      // Only auto-save if all required fields are filled
+      const hasAllFields = data.age && data.country && data.state && 
+                          data.interests && data.tone && data.perspective && data.hookline
+      
+      if (hasAllFields) {
+        // Auto-save silently without showing toast
+        saveDataToLocalStorage(data as FormData)
+      }
+    })
+    
+    return () => subscription.unsubscribe()
+  }, [form])
+
   const formatDataForDisplay = (data: FormData) => {
     const timestamp = new Date().toLocaleString()
     return `Social Post Data - Saved on ${timestamp}
@@ -73,29 +106,83 @@ Generate a ${data.tone} social media post for a ${data.age}-year-old from ${data
 ============================================`
   }
 
+  // Save data to localStorage
+  const saveDataToLocalStorage = (data: FormData) => {
+    try {
+      localStorage.setItem('socialSyncFormData', JSON.stringify(data))
+      const formattedData = formatDataForDisplay(data)
+      localStorage.setItem('socialSyncSavedData', formattedData)
+      return true
+    } catch (error) {
+      console.error('Error saving to localStorage:', error)
+      return false
+    }
+  }
+
+  // Load data from localStorage
+  const loadDataFromLocalStorage = (): FormData | null => {
+    try {
+      const savedData = localStorage.getItem('socialSyncFormData')
+      if (savedData) {
+        return JSON.parse(savedData)
+      }
+    } catch (error) {
+      console.error('Error loading from localStorage:', error)
+    }
+    return null
+  }
+
+  // Load saved display data from localStorage
+  const loadSavedDisplayData = (): string => {
+    try {
+      const savedDisplayData = localStorage.getItem('socialSyncSavedData')
+      return savedDisplayData || ''
+    } catch (error) {
+      console.error('Error loading saved display data:', error)
+      return ''
+    }
+  }
+
   const saveData = async (data: FormData) => {
     setIsSaving(true)
     try {
       const formattedData = formatDataForDisplay(data)
       setSavedData(formattedData)
 
-      // Create and download file
-      const blob = new Blob([formattedData], { type: 'text/plain' })
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = 'data.txt'
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
-
-      toast.success('Data saved successfully and downloaded as data.txt!')
+      // Save to localStorage instead of downloading file
+      const saveSuccess = saveDataToLocalStorage(data)
+      
+      if (saveSuccess) {
+        toast.success('Data saved successfully to browser storage!')
+      } else {
+        throw new Error('Failed to save to browser storage')
+      }
     } catch (error) {
       console.error('Error saving data:', error)
       toast.error('An error occurred while saving the data. Please try again.')
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const clearSavedData = () => {
+    try {
+      localStorage.removeItem('socialSyncFormData')
+      localStorage.removeItem('socialSyncSavedData')
+      setSavedData('')
+      form.reset({
+        age: '',
+        country: '',
+        state: '',
+        interests: '',
+        tone: '',
+        perspective: '',
+        hookline: '',
+      })
+      toast.success('Saved data cleared successfully!')
+    } catch (error) {
+      console.error('Error clearing saved data:', error)
+      toast.error('An error occurred while clearing the data.')
     }
   }
 
@@ -264,23 +351,26 @@ Generate a ${data.tone} social media post for a ${data.age}-year-old from ${data
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8 px-4">
-      <div className="max-w-4xl mx-auto space-y-8">
+      <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
           <h1 className="text-4xl font-bold text-slate-900">Social Post Generator</h1>
           <p className="text-slate-600">Create engaging social media content with AI</p>
         </div>
 
-        {/* Main Form Card */}
-        <Card className="shadow-xl border-0 bg-white/70 backdrop-blur-sm">
-          <CardHeader className="pb-8">
-            <CardTitle className="text-2xl text-slate-800">Content Details</CardTitle>
-            <CardDescription className="text-slate-600">
-              Fill in your details to generate personalized social media content
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Two Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left Column - Form */}
+          <div className="space-y-6">
+            <Card className="shadow-xl border-0 bg-white/70 backdrop-blur-sm">
+              <CardHeader className="pb-8">
+                <CardTitle className="text-2xl text-slate-800">Content Details</CardTitle>
+                <CardDescription className="text-slate-600">
+                  Fill in your details to generate personalized social media content
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Age */}
                 <div className="space-y-2">
@@ -397,7 +487,7 @@ Generate a ${data.tone} social media post for a ${data.age}-year-old from ${data
                 <Button
                   type="submit"
                   disabled={isSaving}
-                  className="bg-slate-700 hover:bg-slate-800 text-white"
+                  className="bg-slate-900 hover:bg-slate-800 text-white"
                 >
                   {isSaving ? (
                     <>
@@ -406,7 +496,7 @@ Generate a ${data.tone} social media post for a ${data.age}-year-old from ${data
                     </>
                   ) : (
                     <>
-                      <Download className="mr-2 h-4 w-4" />
+                      <Save className="mr-2 h-4 w-4" />
                       Save Data
                     </>
                   )}
@@ -416,7 +506,7 @@ Generate a ${data.tone} social media post for a ${data.age}-year-old from ${data
                   type="button"
                   onClick={() => form.handleSubmit(generateAIPost)()}
                   disabled={isGenerating}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="bg-slate-900 hover:bg-slate-800 text-white"
                 >
                   {isGenerating ? (
                     <>
@@ -436,7 +526,7 @@ Generate a ${data.tone} social media post for a ${data.age}-year-old from ${data
                     type="button"
                     onClick={postToTwitter}
                     disabled={isPosting}
-                    className="bg-sky-500 hover:bg-sky-600 text-white"
+                    className="bg-slate-900 hover:bg-slate-800 text-white"
                   >
                     {isPosting ? (
                       <>
@@ -451,135 +541,151 @@ Generate a ${data.tone} social media post for a ${data.age}-year-old from ${data
                     )}
                   </Button>
                 )}
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-
-        {/* Generated Post Preview */}
-        {generatedPost && (
-          <Card className="shadow-lg border-0 bg-white/70 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-xl text-slate-800">AI Generated Post</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={generatedPost}
-                readOnly
-                className="min-h-[120px] border-slate-200 bg-slate-50 text-slate-800"
-                placeholder="Your AI-generated post will appear here..."
-              />
+                </div>
+              </form>
             </CardContent>
           </Card>
-        )}
+        </div>
 
-        {/* Twitter Posting Status */}
-        {(isPosting || postingStage || postingLogs.length > 0) && (
-          <Card className="shadow-lg border-0 bg-white/70 backdrop-blur-sm">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xl text-slate-800 flex items-center gap-2">
-                  <Twitter className="h-5 w-5 text-sky-500" />
-                  Twitter Posting Status
+        {/* Right Column - Outputs */}
+        <div className="space-y-6">
+          {/* Generated Post Preview */}
+          {generatedPost && (
+            <Card className="shadow-lg border-0 bg-white/70 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-xl text-slate-800">AI Generated Post</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  value={generatedPost}
+                  readOnly
+                  className="min-h-[120px] border-slate-200 bg-slate-50 text-slate-800"
+                  placeholder="Your AI-generated post will appear here..."
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Twitter Posting Status */}
+          {(isPosting || postingStage || postingLogs.length > 0) && (
+            <Card className="shadow-lg border-0 bg-white/70 backdrop-blur-sm">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xl text-slate-800 flex items-center gap-2">
+                    <Twitter className="h-5 w-5 text-sky-500" />
+                    Twitter Posting Status
+                  </CardTitle>
+                  {!isPosting && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setPostingLogs([])
+                        setLastPostResult(null)
+                        setPostingStage('')
+                      }}
+                      className="bg-slate-900 hover:bg-slate-800 text-white border-slate-900"
+                    >
+                      Clear Logs
+                    </Button>
+                  )}
+                </div>
+                {postingStage && (
+                  <CardDescription className="text-slate-600 font-medium">
+                    {postingStage}
+                  </CardDescription>
+                )}
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Real-time logs */}
+                {postingLogs.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-slate-700">Process Log:</Label>
+                    <div 
+                      id="posting-logs"
+                      className="bg-slate-50 rounded-md p-3 border border-slate-200 max-h-40 overflow-y-auto scroll-smooth"
+                    >
+                      {postingLogs.map((log, index) => (
+                        <div key={index} className="text-sm font-mono text-slate-700 mb-1">
+                          {log}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Loading indicator */}
+                {isPosting && (
+                  <div className="flex items-center gap-2 text-slate-600">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-sm">Processing...</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Last Post Result */}
+          {lastPostResult && (
+            <Card className={`shadow-lg border-0 bg-white/70 backdrop-blur-sm ${
+              lastPostResult.success ? 'border-l-4 border-l-green-500' : 'border-l-4 border-l-red-500'
+            }`}>
+              <CardHeader>
+                <CardTitle className={`text-xl flex items-center gap-2 ${
+                  lastPostResult.success ? 'text-green-700' : 'text-red-700'
+                }`}>
+                  {lastPostResult.success ? '✅' : '❌'}
+                  {lastPostResult.success ? 'Post Success' : 'Post Failed'}
                 </CardTitle>
-                {!isPosting && (
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-slate-700">{lastPostResult.message}</p>
+                {lastPostResult.success && lastPostResult.tweet_url && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-slate-700">Tweet URL:</Label>
+                    <a 
+                      href={lastPostResult.tweet_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-sky-600 hover:text-sky-800 underline break-all text-sm"
+                    >
+                      {lastPostResult.tweet_url}
+                    </a>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Saved Data Preview */}
+          {savedData && (
+            <Card className="shadow-lg border-0 bg-white/70 backdrop-blur-sm">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xl text-slate-800">Saved Data Preview</CardTitle>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => {
-                      setPostingLogs([])
-                      setLastPostResult(null)
-                      setPostingStage('')
-                    }}
-                    className="text-slate-600 hover:text-slate-800"
+                    onClick={clearSavedData}
+                    className="bg-slate-900 hover:bg-slate-800 text-white border-slate-900"
                   >
-                    Clear Logs
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Clear Saved Data
                   </Button>
-                )}
-              </div>
-              {postingStage && (
-                <CardDescription className="text-slate-600 font-medium">
-                  {postingStage}
-                </CardDescription>
-              )}
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Real-time logs */}
-              {postingLogs.length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-slate-700">Process Log:</Label>
-                  <div 
-                    id="posting-logs"
-                    className="bg-slate-50 rounded-md p-3 border border-slate-200 max-h-40 overflow-y-auto scroll-smooth"
-                  >
-                    {postingLogs.map((log, index) => (
-                      <div key={index} className="text-sm font-mono text-slate-700 mb-1">
-                        {log}
-                      </div>
-                    ))}
-                  </div>
                 </div>
-              )}
-
-              {/* Loading indicator */}
-              {isPosting && (
-                <div className="flex items-center gap-2 text-slate-600">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm">Processing...</span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Last Post Result */}
-        {lastPostResult && (
-          <Card className={`shadow-lg border-0 bg-white/70 backdrop-blur-sm ${
-            lastPostResult.success ? 'border-l-4 border-l-green-500' : 'border-l-4 border-l-red-500'
-          }`}>
-            <CardHeader>
-              <CardTitle className={`text-xl flex items-center gap-2 ${
-                lastPostResult.success ? 'text-green-700' : 'text-red-700'
-              }`}>
-                {lastPostResult.success ? '✅' : '❌'}
-                {lastPostResult.success ? 'Post Success' : 'Post Failed'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-slate-700">{lastPostResult.message}</p>
-              {lastPostResult.success && lastPostResult.tweet_url && (
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-slate-700">Tweet URL:</Label>
-                  <a 
-                    href={lastPostResult.tweet_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-sky-600 hover:text-sky-800 underline break-all text-sm"
-                  >
-                    {lastPostResult.tweet_url}
-                  </a>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Saved Data Preview */}
-        {savedData && (
-          <Card className="shadow-lg border-0 bg-white/70 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-xl text-slate-800">Saved Data Preview</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={savedData}
-                readOnly
-                className="min-h-[200px] border-slate-200 bg-slate-50 text-slate-800 font-mono text-sm"
-                placeholder="Your saved data will appear here..."
-              />
-            </CardContent>
-          </Card>
-        )}
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  value={savedData}
+                  readOnly
+                  className="min-h-[200px] border-slate-200 bg-slate-50 text-slate-800 font-mono text-sm"
+                  placeholder="Your saved data will appear here..."
+                />
+              </CardContent>
+            </Card>
+          )}
+        </div>
+        </div>
       </div>
     </div>
   )
