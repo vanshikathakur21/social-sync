@@ -403,9 +403,9 @@ Generate a ${data.tone} social media post for a ${data.age}-year-old from ${data
                     return;
                 }
 
-                // Make a POST request to your Python backend
-                // You will need to have a Flask/Django/FastAPI server running at http://127.0.0.1:5000
-                const response = await fetch('http://127.0.0.1:5000/generate', {
+                // Make a POST request to Cloudflare Functions
+                // This will work with your deployed Cloudflare Pages site
+                const response = await fetch('/generate', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -458,9 +458,9 @@ Generate a ${data.tone} social media post for a ${data.age}-year-old from ${data
                     return;
                 }
 
-                // Make a POST request to Twitter backend
-                // This assumes you have a backend setup to handle Twitter API authentication and posting
-                const response = await fetch('http://127.0.0.1:5000/post-to-twitter', {
+                // Make a POST request to Cloudflare Functions
+                // This will work with your deployed Cloudflare Pages site
+                const response = await fetch('/post-to-twitter', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
