@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Post Form</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            box-sizing: border-box;
+        }
+        
+        input[type="text"]:focus, input[type="number"]:focus, select:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        
+        select {
+            cursor: pointer;
+        }
+        
+        .button-container {
+            text-align: center;
+            margin: 30px 0;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .save-btn, .generate-btn, .twitter-btn {
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 6px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .save-btn {
+            background-color: #4CAF50;
+        }
+        .save-btn:hover {
+            background-color: #45a049;
+        }
+        .save-btn:active {
+            background-color: #3d8b40;
+        }
+
+        .generate-btn {
+            background-color: #007bff;
+        }
+        .generate-btn:hover {
+            background-color: #0056b3;
+        }
+        .generate-btn:active {
+            background-color: #004085;
+        }
+
+        .twitter-btn {
+            background-color: #1DA1F2;
+        }
+        .twitter-btn:hover {
+            background-color: #1a8cd8;
+        }
+        .twitter-btn:active {
+            background-color: #0d6fab;
+        }
+        
+        .output-section {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #eee;
+        }
+        
+        .output-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        #dataDisplay, #aiPostDisplay {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 14px;
+            background-color: #f9f9f9;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+
+        #aiPostDisplay {
+            min-height: 100px;
+        }
+        
+        .success-message {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 20px;
+            display: none;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 20px;
+            display: none;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            body {
+                padding: 10px;
+            }
+
+            .button-container {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Social Post Data Form</h1>
+        
+        <form id="socialForm">
+            <div class="form-group">
+                <label for="ageInput">Age:</label>
+                <input type="number" id="ageInput" name="age" min="1" max="120" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="countryInput">Country:</label>
+                <input type="text" id="countryInput" name="country" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="stateInput">State:</label>
+                <input type="text" id="stateInput" name="state" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="interestsInput">Interests:</label>
+                <input type="text" id="interestsInput" name="interests" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="toneSelect">Tone:</label>
+                <select id="toneSelect" name="tone" required>
+                    <option value="">Select a tone</option>
+                    <option value="Friendly">Friendly</option>
+                    <option value="Inspirational">Inspirational</option>
+                    <option value="Funny">Funny</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="perspectiveSelect">Perspective:</label>
+                <select id="perspectiveSelect" name="perspective" required>
+                    <option value="">Select a perspective</option>
+                    <option value="First Person">First Person</option>
+                    <option value="General Trivia">General Trivia</option>
+                    <option value="Reflective">Reflective</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="hooklineInput">Hook Line:</label>
+                <input type="text" id="hooklineInput" name="hookline" required>
+            </div>
+            
+            <div class="button-container">
+                <button type="button" class="save-btn" id="saveButton">Save Data</button>
+                <button type="button" class="generate-btn" id="generateButton">Generate AI Post</button>
+                <button type="button" class="twitter-btn" id="twitterButton" style="display: none;">Post to Twitter</button>
+            </div>
+        </form>
+        
+        <div class="success-message" id="successMessage">
+            Data saved successfully and downloaded as data.txt!
+        </div>
+        
+        <div class="error-message" id="errorMessage">
+            <span id="errorText"></span>
+        </div>
+
+        <div class="output-section">
+            <h3>AI Generated Post Preview:</h3>
+            <textarea id="aiPostDisplay" readonly placeholder="Your AI-generated post will appear here..."></textarea>
+        </div>
+        
+        <div class="output-section">
+            <h3>Saved Data Preview:</h3>
+            <textarea id="dataDisplay" readonly placeholder="Your saved data will appear here..."></textarea>
+        </div>
+    </div>
+
+    <script>
+        // Get form data function
+        function getFormData() {
+            return {
+                age: document.getElementById('ageInput').value,
+                country: document.getElementById('countryInput').value,
+                state: document.getElementById('stateInput').value,
+                interests: document.getElementById('interestsInput').value,
+                tone: document.getElementById('toneSelect').value,
+                perspective: document.getElementById('perspectiveSelect').value,
+                hookline: document.getElementById('hooklineInput').value
+            };
+        }
+        
+        // Format data for display and saving
+        function formatDataForDisplay(data) {
+            const timestamp = new Date().toLocaleString();
+            return `Social Post Data - Saved on ${timestamp}
+============================================
+
+Age: ${data.age}
+Country: ${data.country}
+State: ${data.state}
+Interests: ${data.interests}
+Tone: ${data.tone}
+Perspective: ${data.perspective}
+Hook Line: ${data.hookline}
+
+Formatted Prompt (for AI):
+Generate a ${data.tone} social media post for a ${data.age}-year-old from ${data.state}, ${data.country}, interested in ${data.interests}. The perspective should be ${data.perspective}. Start with: "${data.hookline}"
+
+============================================`;
+        }
+
+        // Validate form data
+        function validateForm(data) {
+            const requiredFields = ['age', 'country', 'state', 'interests', 'tone', 'perspective', 'hookline'];
+            
+            for (let field of requiredFields) {
+                if (!data[field] || data[field].toString().trim() === '') {
+                    return { valid: false, message: `Please fill in the ${field} field.` }; // Fixed string literal
+                }
+            }
+            
+            // Validate age specifically
+            const age = parseInt(data.age);
+            if (isNaN(age) || age < 1 || age > 120) {
+                return { valid: false, message: 'Please enter a valid age between 1 and 120.' };
+            }
+            
+            return { valid: true };
+        }
+        
+        // Show error message
+        function showError(message) {
+            const errorMessage = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+            errorText.textContent = message;
+            errorMessage.style.display = 'block';
+            
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Show success message
+        function showSuccess(message) {
+            const successMessage = document.getElementById('successMessage');
+            successMessage.textContent = message;
+            successMessage.style.display = 'block';
+            
+            setTimeout(() => {
+                successMessage.style.display = 'none';
+            }, 3000);
+        }
+        
+        // Save data to file and display
+        function saveData() {
+            try {
+                // Add loading state
+                const saveButton = document.getElementById('saveButton');
+                const container = document.querySelector('.container');
+                saveButton.textContent = 'Saving...';
+                container.classList.add('loading');
+                
+                const formData = getFormData();
+                
+                // Validate form
+                const validation = validateForm(formData);
+                if (!validation.valid) {
+                    showError(validation.message);
+                    saveButton.textContent = 'Save Data'; // Reset button text on error
+                    container.classList.remove('loading'); // Remove loading state on error
+                    return;
+                }
+                
+                // Format data for display
+                const formattedData = formatDataForDisplay(formData);
+                
+                // Display data in textarea
+                document.getElementById('dataDisplay').value = formattedData;
+                
+                // Create and download file
+                const blob = new Blob([formattedData], { type: 'text/plain' });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'data.txt'; // This is the filename
+                
+                // Trigger download
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+                
+                // Show success message
+                showSuccess('Data saved successfully and downloaded as data.txt!');
+                
+            } catch (error) {
+                console.error('Error saving data:', error);
+                showError('An error occurred while saving the data. Please try again.');
+            } finally {
+                // Remove loading state
+                const saveButton = document.getElementById('saveButton');
+                const container = document.querySelector('.container');
+                saveButton.textContent = 'Save Data';
+                container.classList.remove('loading');
+            }
+        }
+
+        // Generate AI Post (now sends data to backend)
+        async function generateAIPost() {
+            const generateButton = document.getElementById('generateButton');
+            const container = document.querySelector('.container');
+            const aiPostDisplay = document.getElementById('aiPostDisplay');
+            const twitterButton = document.getElementById('twitterButton');
+
+            try {
+                generateButton.textContent = 'Generating...';
+                container.classList.add('loading');
+                aiPostDisplay.value = 'Generating post... Please wait.'; // Clear and show loading message
+
+                const formData = getFormData();
+                
+                // Validate form
+                const validation = validateForm(formData);
+                if (!validation.valid) {
+                    showError(validation.message);
+                    aiPostDisplay.value = ''; // Clear loading message on error
+                    return;
+                }
+
+                // Make a POST request to your Python backend
+                // You will need to have a Flask/Django/FastAPI server running at http://127.0.0.1:5000
+                const response = await fetch('http://127.0.0.1:5000/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to generate AI post from backend.');
+                }
+
+                const data = await response.json();
+                const generatedText = data.post;
+
+                if (generatedText) {
+                    aiPostDisplay.value = generatedText;
+                    showSuccess('AI Post generated successfully!');
+                    // Show Twitter button after successful generation
+                    twitterButton.style.display = 'inline-block';
+                } else {
+                    aiPostDisplay.value = 'No post generated. Please try again.';
+                    showError('Received empty response from AI.');
+                }
+
+            } catch (error) {
+                console.error('Error generating AI post:', error);
+                showError('An error occurred: ' + error.message);
+                aiPostDisplay.value = 'Error generating post: ' + error.message;
+            } finally {
+                generateButton.textContent = 'Generate AI Post';
+                container.classList.remove('loading');
+            }
+        }
+
+        // Post to Twitter function
+        async function postToTwitter() {
+            const twitterButton = document.getElementById('twitterButton');
+            const container = document.querySelector('.container');
+            const aiPostDisplay = document.getElementById('aiPostDisplay');
+
+            try {
+                twitterButton.textContent = 'Posting...';
+                container.classList.add('loading');
+
+                const postText = aiPostDisplay.value;
+                
+                if (!postText || postText.trim() === '') {
+                    showError('No post to share. Please generate a post first.');
+                    return;
+                }
+
+                // Make a POST request to Twitter backend
+                // This assumes you have a backend setup to handle Twitter API authentication and posting
+                const response = await fetch('http://127.0.0.1:5000/post-to-twitter', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ post: postText })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to post to Twitter.');
+                }
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess(data.message);
+                    // Show tweet URL if available
+                    if (data.tweet_url) {
+                        showSuccess(`Tweet posted! View it at: ${data.tweet_url}`); // Fixed string literal
+                    }
+                } else {
+                    showError(data.error || 'Failed to post to Twitter.');
+                }
+
+            } catch (error) {
+                console.error('Error posting to Twitter:', error);
+                showError('An error occurred: ' + error.message);
+            } finally {
+                twitterButton.textContent = 'Post to Twitter';
+                container.classList.remove('loading');
+            }
+        }
+        
+        // Event listener for save button
+        document.getElementById('saveButton').addEventListener('click', saveData);
+
+        // Event listener for generate button
+        document.getElementById('generateButton').addEventListener('click', generateAIPost);
+
+        // Event listener for Twitter button
+        document.getElementById('twitterButton').addEventListener('click', postToTwitter);
+        
+        // Allow Enter key to trigger save in input fields
+        document.getElementById('socialForm').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT')) {
+                e.preventDefault();
+                saveData(); 
+            }
+        });
+        
+        // Debounce function to limit auto-save frequency
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func.apply(this, args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+        
+        // Auto-save feature (optional - saves to localStorage)
+        function autoSaveToStorage() {
+            try {
+                const formData = getFormData();
+                localStorage.setItem('socialFormData', JSON.stringify(formData));
+            } catch (error) {
+                console.warn('Could not save to localStorage:', error);
+            }
+        }
+        
+        // Debounced auto-save (waits 500ms after user stops typing)
+        const debouncedAutoSave = debounce(autoSaveToStorage, 500);
+        
+        // Load saved data from localStorage on page load
+        function loadSavedData() {
+            try {
+                const savedData = localStorage.getItem('socialFormData');
+                if (savedData) {
+                    const data = JSON.parse(savedData);
+                    document.getElementById('ageInput').value = data.age || '';
+                    document.getElementById('countryInput').value = data.country || '';
+                    document.getElementById('stateInput').value = data.state || '';
+                    document.getElementById('interestsInput').value = data.interests || '';
+                    document.getElementById('toneSelect').value = data.tone || '';
+                    document.getElementById('perspectiveSelect').value = data.perspective || '';
+                    document.getElementById('hooklineInput').value = data.hookline || '';
+                }
+            } catch (error) {
+                console.warn('Could not load from localStorage:', error);
+            }
+        }
+        
+        // Auto-save on input changes (debounced)
+        document.getElementById('socialForm').addEventListener('input', debouncedAutoSave);
+        
+        // Load saved data when page loads
+        window.addEventListener('load', loadSavedData);
+    </script>
+</body>
+</html>
