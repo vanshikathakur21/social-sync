@@ -11,8 +11,8 @@ compatibility_date = "2024-01-15"
 # Non-sensitive configuration variables can go here if needed
 
 # Build configuration for Pages
-[[pages_build_output_dir]]
-# Cloudflare Pages will automatically detect and serve static files from root directory
+# For the original HTML version (if needed)
+# pages_build_output_dir = "."
 
 # Functions configuration is handled automatically by Cloudflare Pages
 # Functions in /functions directory are automatically deployed
