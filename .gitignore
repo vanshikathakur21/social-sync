@@ -2,6 +2,7 @@
 .env
 .env.local
 .env.production
+env-template.txt
 
 # API keys and secrets (safety net)
 **/api-keys.txt

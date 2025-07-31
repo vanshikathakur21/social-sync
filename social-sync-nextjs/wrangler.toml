@@ -1,0 +1,33 @@
+name = "social-sync-nextjs"
+compatibility_date = "2024-01-15"
+
+# Pages configuration for Next.js app
+[env.production]
+compatibility_date = "2024-01-15"
+
+# Build configuration for Next.js static export
+# Cloudflare Pages will build from 'out' directory
+pages_build_output_dir = "out"
+
+# Environment variables (these will be set via Cloudflare dashboard or CLI)
+# Do not put actual values here - use 'wrangler secret put' command instead
+[vars]
+# Non-sensitive configuration variables can go here if needed
+
+# Functions configuration is handled automatically by Cloudflare Pages
+# Functions in /functions directory are automatically deployed
+
+# KV namespace bindings (if needed in the future)
+# [[kv_namespaces]]
+# binding = "SOCIAL_SYNC_KV"
+# id = "your-kv-namespace-id"
+# preview_id = "your-preview-kv-namespace-id"
+
+# R2 bucket bindings (if needed for file storage in the future)
+# [[r2_buckets]]
+# binding = "SOCIAL_SYNC_BUCKET"
+# bucket_name = "your-bucket-name"
+
+# Analytics (optional)
+[analytics]
+enabled = true
