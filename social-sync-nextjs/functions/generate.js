@@ -63,7 +63,7 @@ export async function onRequestPost(context) {
       });
     }
 
-    const prompt = `Generate a ${tone} social media post for a ${age}-year-old from ${state}, ${country}, interested in ${interests}. The perspective should be ${perspective}. Start with: "${hookline}"`;
+    const prompt = `Generate a ${tone} X post for a ${age}-year-old from ${state}, ${country}, interested in ${interests}. The perspective should be ${perspective}. Start with: "${hookline}. Restrict the length of this post to a total of 280 characters."`;
 
     // OpenAI API call
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {

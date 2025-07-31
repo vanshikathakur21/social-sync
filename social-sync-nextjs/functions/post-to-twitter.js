@@ -109,11 +109,19 @@ export async function onRequestPost(context) {
     });
 
     if (!twitterResponse.ok) {
-      const errorData = await twitterResponse.json();
+      let errorData;
+      try {
+        errorData = await twitterResponse.json();
+      } catch (parseError) {
+        console.error('Failed to parse Twitter error response:', parseError);
+        errorData = { detail: 'Failed to parse error response from Twitter API' };
+      }
+      
       console.error('Twitter API error:', errorData);
       return new Response(JSON.stringify({
         success: false,
-        error: `Twitter posting failed: ${errorData.detail || errorData.title || 'Unknown error'}`
+        error: `Twitter posting failed: ${errorData.detail || errorData.title || errorData.message || 'Unknown error'}`,
+        status_code: twitterResponse.status
       }), {
         status: 500,
         headers: {
@@ -123,13 +131,47 @@ export async function onRequestPost(context) {
       });
     }
 
-    const twitterData = await twitterResponse.json();
+    let twitterData;
+    try {
+      twitterData = await twitterResponse.json();
+      console.log('Twitter API success response:', twitterData);
+    } catch (parseError) {
+      console.error('Failed to parse Twitter success response:', parseError);
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Failed to parse success response from Twitter API'
+      }), {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        }
+      });
+    }
+
+    // Validate the response structure
+    if (!twitterData || !twitterData.data || !twitterData.data.id) {
+      console.error('Invalid Twitter API response structure:', twitterData);
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Invalid response structure from Twitter API'
+      }), {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        }
+      });
+    }
+    
+    const tweetId = twitterData.data.id;
+    const tweetUrl = `https://x.com/i/status/${tweetId}`;
     
     return new Response(JSON.stringify({
       success: true,
       message: "Post successfully shared on Twitter!",
-      tweet_id: twitterData.data.id,
-      tweet_url: `https://twitter.com/user/status/${twitterData.data.id}`
+      tweet_id: tweetId,
+      tweet_url: tweetUrl
     }), {
       status: 200,
       headers: {

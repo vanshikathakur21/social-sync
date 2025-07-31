@@ -37,6 +37,9 @@ export default function SocialSyncForm() {
   const [isSaving, setIsSaving] = useState(false)
   const [generatedPost, setGeneratedPost] = useState('')
   const [savedData, setSavedData] = useState('')
+  const [postingStage, setPostingStage] = useState('')
+  const [postingLogs, setPostingLogs] = useState<string[]>([])
+  const [lastPostResult, setLastPostResult] = useState<{success: boolean, message: string, tweet_url?: string} | null>(null)
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -132,14 +135,44 @@ Generate a ${data.tone} social media post for a ${data.age}-year-old from ${data
     }
   }
 
+  const addPostingLog = (message: string) => {
+    const timestamp = new Date().toLocaleTimeString()
+    setPostingLogs(prev => [...prev, `[${timestamp}] ${message}`])
+    
+    // Auto-scroll to bottom of logs after a brief delay
+    setTimeout(() => {
+      const logContainer = document.getElementById('posting-logs')
+      if (logContainer) {
+        logContainer.scrollTop = logContainer.scrollHeight
+      }
+    }, 100)
+  }
+
   const postToTwitter = async () => {
     if (!generatedPost || generatedPost.trim() === '') {
       toast.error('No post to share. Please generate a post first.')
       return
     }
 
+    // Reset states
     setIsPosting(true)
+    setPostingLogs([])
+    setLastPostResult(null)
+    
     try {
+      // Step 1: Validation
+      setPostingStage('Validating post content...')
+      addPostingLog('Starting Twitter posting process')
+      addPostingLog(`Post length: ${generatedPost.length} characters`)
+      
+      if (generatedPost.length > 280) {
+        addPostingLog('⚠️ Post will be truncated to 280 characters')
+      }
+
+      // Step 2: Making API request
+      setPostingStage('Connecting to Twitter API...')
+      addPostingLog('Sending request to Twitter API')
+      
       const response = await fetch('/post-to-twitter', {
         method: 'POST',
         headers: {
@@ -148,27 +181,80 @@ Generate a ${data.tone} social media post for a ${data.age}-year-old from ${data
         body: JSON.stringify({ post: generatedPost }),
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to post to Twitter.')
+      // Step 3: Processing response
+      setPostingStage('Processing Twitter response...')
+      addPostingLog(`Received response with status: ${response.status}`)
+
+      let result
+      try {
+        result = await response.json()
+        addPostingLog('Successfully parsed JSON response')
+      } catch (parseError) {
+        addPostingLog('❌ Failed to parse response JSON')
+        throw new Error('Invalid response from Twitter API')
       }
 
-      const result = await response.json()
+      // Step 4: Handle response
+      if (!response.ok) {
+        addPostingLog(`❌ API request failed: ${result.error || 'Unknown error'}`)
+        setLastPostResult({
+          success: false,
+          message: result.error || 'Failed to post to Twitter.'
+        })
+        toast.error(result.error || 'Failed to post to Twitter.')
+        setPostingStage('Failed to post')
+        return
+      }
 
+      // Step 5: Check success
       if (result.success) {
-        toast.success(result.message)
+        addPostingLog('✅ Post successfully sent to Twitter!')
+        if (result.tweet_id) {
+          addPostingLog(`Tweet ID: ${result.tweet_id}`)
+        }
         if (result.tweet_url) {
-          toast.success(`Tweet posted! View it at: ${result.tweet_url}`)
+          addPostingLog(`Tweet URL: ${result.tweet_url}`)
+        }
+        
+        setLastPostResult({
+          success: true,
+          message: result.message || 'Post successfully shared on Twitter!',
+          tweet_url: result.tweet_url
+        })
+        
+        setPostingStage('Successfully posted!')
+        toast.success(result.message || 'Post successfully shared on Twitter!')
+        
+        if (result.tweet_url) {
+          toast.success(`View your tweet: ${result.tweet_url}`)
         }
       } else {
+        addPostingLog(`❌ Twitter API returned success=false: ${result.error || 'Unknown error'}`)
+        setLastPostResult({
+          success: false,
+          message: result.error || 'Failed to post to Twitter.'
+        })
         toast.error(result.error || 'Failed to post to Twitter.')
+        setPostingStage('Failed to post')
       }
     } catch (error) {
       console.error('Error posting to Twitter:', error)
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      addPostingLog(`❌ Exception occurred: ${errorMessage}`)
+      
+      setLastPostResult({
+        success: false,
+        message: errorMessage
+      })
+      
       toast.error(`An error occurred: ${errorMessage}`)
+      setPostingStage('Error occurred')
     } finally {
       setIsPosting(false)
+      // Keep the stage for a few seconds then clear it
+      setTimeout(() => {
+        setPostingStage('')
+      }, 3000)
     }
   }
 
@@ -383,6 +469,97 @@ Generate a ${data.tone} social media post for a ${data.age}-year-old from ${data
                 className="min-h-[120px] border-slate-200 bg-slate-50 text-slate-800"
                 placeholder="Your AI-generated post will appear here..."
               />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Twitter Posting Status */}
+        {(isPosting || postingStage || postingLogs.length > 0) && (
+          <Card className="shadow-lg border-0 bg-white/70 backdrop-blur-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl text-slate-800 flex items-center gap-2">
+                  <Twitter className="h-5 w-5 text-sky-500" />
+                  Twitter Posting Status
+                </CardTitle>
+                {!isPosting && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setPostingLogs([])
+                      setLastPostResult(null)
+                      setPostingStage('')
+                    }}
+                    className="text-slate-600 hover:text-slate-800"
+                  >
+                    Clear Logs
+                  </Button>
+                )}
+              </div>
+              {postingStage && (
+                <CardDescription className="text-slate-600 font-medium">
+                  {postingStage}
+                </CardDescription>
+              )}
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Real-time logs */}
+              {postingLogs.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700">Process Log:</Label>
+                  <div 
+                    id="posting-logs"
+                    className="bg-slate-50 rounded-md p-3 border border-slate-200 max-h-40 overflow-y-auto scroll-smooth"
+                  >
+                    {postingLogs.map((log, index) => (
+                      <div key={index} className="text-sm font-mono text-slate-700 mb-1">
+                        {log}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Loading indicator */}
+              {isPosting && (
+                <div className="flex items-center gap-2 text-slate-600">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm">Processing...</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Last Post Result */}
+        {lastPostResult && (
+          <Card className={`shadow-lg border-0 bg-white/70 backdrop-blur-sm ${
+            lastPostResult.success ? 'border-l-4 border-l-green-500' : 'border-l-4 border-l-red-500'
+          }`}>
+            <CardHeader>
+              <CardTitle className={`text-xl flex items-center gap-2 ${
+                lastPostResult.success ? 'text-green-700' : 'text-red-700'
+              }`}>
+                {lastPostResult.success ? '✅' : '❌'}
+                {lastPostResult.success ? 'Post Success' : 'Post Failed'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-slate-700">{lastPostResult.message}</p>
+              {lastPostResult.success && lastPostResult.tweet_url && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700">Tweet URL:</Label>
+                  <a 
+                    href={lastPostResult.tweet_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-sky-600 hover:text-sky-800 underline break-all text-sm"
+                  >
+                    {lastPostResult.tweet_url}
+                  </a>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
